@@ -1,21 +1,17 @@
-use ethers_core::types::BlockId;
+use ethers_core::types::{BlockId, Transaction};
 use ethers_providers::{Middleware, Provider, Http};
 use revm::{
     db::{CacheDB, EthersDB, StateBuilder},
     inspector_handle_register,
     inspectors::TracerEip3155,
     precompile::Bytes,
-    primitives::{AccountInfo, Address, TransactTo, B256, U256, TxKind},
+    primitives::{AccountInfo, Address, TransactTo, B256, U256, TxKind, TxEnv},
     DatabaseCommit,
     Evm
 };
-use std::sync::Arc;
+use std::{borrow::BorrowMut, sync::Arc};
 
-pub async fn pre_execute_transaction() {
-
-    // Set up the HTTP transport which is consumed by the RPC client.
-    let client = Provider::<Http>::try_from("http://95.217.34.145:8545").unwrap();
-    let client = Arc::new(client);
+pub async fn pre_execute_transaction(client: Arc<Provider<Http>>, tx: &TxEnv) {
 
     // Params
     let chain_id: u64 = 1;
@@ -56,52 +52,60 @@ pub async fn pre_execute_transaction() {
     let txs = block.transactions.len();
     println!("Found {txs} transactions.");
 
-    for tx in block.transactions {
-        evm = evm
-            .modify()
-            .modify_tx_env(|etx| {
-                etx.caller = Address::from(tx.from.as_fixed_bytes());
-                etx.gas_limit = tx.gas.as_u64();
-                etx.gas_price = U256::from_limbs(
-                    tx.gas_price.unwrap().0
-                );
-                etx.value = U256::from_limbs(tx.value.0);
-                etx.data = tx.input.0.into();
-                etx.gas_priority_fee = if let Some(max_priority_fee_per_gas) = tx.max_priority_fee_per_gas { Some(U256::from_limbs(max_priority_fee_per_gas.0)) } else { None };
-                etx.chain_id = Some(chain_id);
-                etx.nonce = Some(tx.nonce.as_u64());
-                etx.access_list = Default::default();
+    evm = evm
+        .modify()
+        .modify_tx_env(|etx| {
+            etx.clone_from(tx);
+        })
+        .build();
+    
+    let evm_result = evm.transact();
 
-                etx.transact_to = match tx.to {
-                    Some(to_address) => TxKind::Call(Address::from(to_address.as_fixed_bytes())),
-                    None => TxKind::Create,
-                };
-            })
-            .build();
-        
-        let evm_result = evm.transact();
+    if let Ok(evm_result) = evm_result {
+        let revm::primitives::ResultAndState { result, state } = evm_result;
 
-        if let Ok(evm_result) = evm_result {
-            let revm::primitives::ResultAndState { result, state } = evm_result;
-
-            // what need to be inspected
-            dbg!(result);
-            dbg!(state);
-        } else {
-            println!("Something went wrong here. The transaction is invalid");
-        }
+        // what need to be inspected
+        dbg!(result);
+        dbg!(state);
+    } else {
+        println!("Something went wrong here. The transaction is invalid");
     }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::pre_execute_transaction;
+    use revm::primitives::{Address, TxEnv, Bytes, U256};
     use tokio::runtime::Runtime;
+    use ethers_providers::{Provider, Http};
+    use std::sync::Arc;
+    use ethers_core::types::{Transaction, H256, H160, U64, OtherFields};
+    use std::str::FromStr;
 
     #[test]
     fn test_simulator() {
         let rt  = Runtime::new().unwrap();
 
-        rt.block_on( async { pre_execute_transaction().await });
+        // Set up the HTTP transport which is consumed by the RPC client.
+        let client = Provider::<Http>::try_from("http://95.217.34.145:8545").unwrap();
+        let client = Arc::new(client);
+
+        let tx = TxEnv {
+            nonce: Some(6676),
+            caller: Address::from_str("0x4f69c5b694d5a14a0a595703175c478ec6b2a2fe").unwrap(),
+            transact_to: revm::primitives::TxKind::Call(Address::from_str("0xa0b5d75fef7b024294411cd92bf7e68ba5f18c99").unwrap()),
+            value: U256::from(0),
+            gas_price: U256::from_str_radix("440741668508", 10).unwrap(),
+            gas_limit: 450000,
+            data: Bytes::from_str("0x94264cbc00000000000000000000000000000000000000000000000070035f89301680000000000000000000000000000000000000000000000000004050cfbc87c12f29000000000000000000000000000000000000000000000000000000005f655db2000000000000000000000000000000000000000000000000000000005f6558a4").unwrap(),
+            access_list: Default::default(),
+            gas_priority_fee: None,
+            chain_id: Some(1),
+            max_fee_per_blob_gas: None,
+            blob_hashes: Default::default(),
+        };
+
+        rt.block_on( async { pre_execute_transaction(client, &tx).await });
     }
 }
