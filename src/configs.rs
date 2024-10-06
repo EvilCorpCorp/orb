@@ -12,6 +12,7 @@ pub struct ServerConfig {
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub server: ServerConfig,
+    pub ethereumrpc: String,
 }
 
 

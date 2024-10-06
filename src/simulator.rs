@@ -9,9 +9,9 @@ use revm::{
     DatabaseCommit,
     Evm
 };
-use std::{borrow::BorrowMut, sync::Arc};
+use std::{sync::Arc};
 
-pub async fn pre_execute_transaction(client: Arc<Provider<Http>>, tx: &TxEnv) {
+pub async fn execute_transaction(client: Arc<Provider<Http>>, tx: &TxEnv) {
 
     // Params
     let chain_id: u64 = 1;
@@ -75,7 +75,7 @@ pub async fn pre_execute_transaction(client: Arc<Provider<Http>>, tx: &TxEnv) {
 
 #[cfg(test)]
 mod tests {
-    use super::pre_execute_transaction;
+    use super::execute_transaction;
     use revm::primitives::{Address, TxEnv, Bytes, U256};
     use tokio::runtime::Runtime;
     use ethers_providers::{Provider, Http};
@@ -106,6 +106,6 @@ mod tests {
             blob_hashes: Default::default(),
         };
 
-        rt.block_on( async { pre_execute_transaction(client, &tx).await });
+        rt.block_on( async { execute_transaction(client, &tx).await });
     }
 }
