@@ -18,6 +18,10 @@ struct InputData {
     age: u8,
 }
 
+// Ideally we shoudl define together the type, and just think a bit of how can we conver it
+// Other route to just like get info from the db
+// Do we setup a db ?
+// What is the priority
 async fn recv_t(Json(payload): Json<InputData>) -> String {
     format!("Received name: {}, age: {}", payload.name, payload.age)
 }
@@ -34,7 +38,7 @@ async fn main() {
     // build our application with a route
     // TODO: add our endpoint to receive transactions
     let app = Router::new()
-		.route("/hi", post(recv_t));
+		.route("/checkTransaction", post(recv_t));
 
     // run our app with hyper, listening globally on port 3000
     let addr = format!("{}:{}", config.server.host, config.server.port);
