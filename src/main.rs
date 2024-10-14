@@ -5,7 +5,7 @@ use axum::{
     Json
 };
 use std::sync::Arc;
-use ethers_providers::{Provider, Http};
+use ethers_providers::{Http, Middleware, Provider};
 use serde::Deserialize;
 use revm::primitives::{Address, TxEnv, Bytes, U256};
 use std::str::FromStr;
@@ -56,7 +56,10 @@ async fn handle_execute(
         max_fee_per_blob_gas: None,
         blob_hashes: Default::default(),
     };
-    let _ = simulator::execute_transaction(client, &transaction);
+
+    let block_number: u64 = client.get_block_number().await.expect("couldn't get latest block number").as_u64();
+
+    let _ = simulator::execute_transaction(client, block_number, &transaction);
 }
 
 #[derive(Deserialize)]
@@ -70,5 +73,4 @@ struct TransactionPayload {
     data: String,
     gas_priority_fee: String,
     max_fee_per_blob_gas: String
-
 }

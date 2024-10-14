@@ -1,56 +1,35 @@
-use ethers_core::types::{BlockId, Transaction};
-use ethers_providers::{Middleware, Provider, Http};
+use std::error::Error;
+use ethers_providers::{Provider, Http};
 use revm::{
     db::{CacheDB, EthersDB, StateBuilder},
     inspector_handle_register,
     inspectors::TracerEip3155,
-    precompile::Bytes,
-    primitives::{AccountInfo, Address, TransactTo, B256, U256, TxKind, TxEnv},
-    DatabaseCommit,
+    primitives::{U256, TxEnv, ResultAndState},
     Evm
 };
 use std::{sync::Arc};
 
-pub async fn execute_transaction(client: Arc<Provider<Http>>, tx: &TxEnv) {
 
-    // Params
-    let chain_id: u64 = 1;
-    let block_number = 10889447;
+const CHAIN_ID: u64 = 1;
 
-    // Fetch the transaction-rich block
-    let block = client.get_block_with_txs(block_number).await.unwrap().unwrap();
-    println!("Fetched block number: {}", block.number.unwrap().0[0]);
-    let previous_block_number = block_number - 1;
-
-    // Use the previous block state as the db with caching
-    let prev_id: BlockId = previous_block_number.into();
-    // SAFETY: This cannot fail since this is in the top-level tokio runtime
-
+pub async fn execute_transaction(client: Arc<Provider<Http>>, block_number: u64, tx: &TxEnv) -> Result<ResultAndState, Box<dyn Error>> {
     // Using empty because we don't need this info for now
     let tracer = TracerEip3155::new(Box::new(std::io::empty()));
 
-    let state_db = EthersDB::new(client, Some(prev_id)).expect("panic");
+    let state_db = EthersDB::new(client, Some(block_number.into())).expect("panic");
     let cache_db: CacheDB<EthersDB<Provider<Http>>> = CacheDB::new(state_db);
     let mut state = StateBuilder::new_with_database(cache_db).build();
     let mut evm = Evm::builder()
         .with_db(&mut state)
         .with_external_context(tracer)
         .modify_block_env(|b| {
-            b.number = U256::from(block.number.unwrap().0[0]);
-            b.coinbase = Address::from(block.author.unwrap().as_fixed_bytes());
-            b.timestamp = U256::from(block.timestamp.0[0]);
-
-            b.difficulty = U256::from(block.difficulty.0[0]);
-            b.gas_limit = U256::from(block.gas_limit.0[0]);
+            b.number = U256::from(block_number + 1);
         })
         .modify_cfg_env(|c| {
-            c.chain_id = chain_id;
+            c.chain_id = CHAIN_ID;
         })
         .append_handler_register(inspector_handle_register)
         .build();
-
-    let txs = block.transactions.len();
-    println!("Found {txs} transactions.");
 
     evm = evm
         .modify()
@@ -59,18 +38,10 @@ pub async fn execute_transaction(client: Arc<Provider<Http>>, tx: &TxEnv) {
         })
         .build();
     
-    let evm_result = evm.transact();
-
-    if let Ok(evm_result) = evm_result {
-        let revm::primitives::ResultAndState { result, state } = evm_result;
-
-        // what need to be inspected
-        dbg!(result);
-        dbg!(state);
-    } else {
-        println!("Something went wrong here. The transaction is invalid");
-    }
-
+    evm.transact()
+        .map_err(|_err| {
+            "Something went wrong here. The transaction is invalid.".into()
+        })
 }
 
 #[cfg(test)]
@@ -80,7 +51,6 @@ mod tests {
     use tokio::runtime::Runtime;
     use ethers_providers::{Provider, Http};
     use std::sync::Arc;
-    use ethers_core::types::{Transaction, H256, H160, U64, OtherFields};
     use std::str::FromStr;
 
     #[test]
@@ -106,6 +76,8 @@ mod tests {
             blob_hashes: Default::default(),
         };
 
-        rt.block_on( async { execute_transaction(client, &tx).await });
+        let block_number = 10889447 - 1;
+
+        rt.block_on( async { execute_transaction(client, block_number, &tx).await });
     }
 }
