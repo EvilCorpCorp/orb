@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres
+    restart: always
+    volumes:
+      - ./postgres_data/pgdata:/var/lib/postgresql/data
+      - ./entrypoint.sh:/usr/bin/entrypoint.sh
+    entrypoint: ["/usr/bin/entrypoint.sh"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_TABLE_NAME: ${DB_TABLE_NAME}
+  evm:
+    image: rust
+    restart: always
+    env_file: .env
