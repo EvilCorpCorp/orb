@@ -2,16 +2,26 @@ services:
   db:
     image: postgres
     restart: always
+    command: >
+      bash -c "
+      if [ -f /var/lib/postgresql/data/postmaster.pid ]; then rm /var/lib/postgresql/data/postmaster.pid; fi
+      exec postgres
+      "
     volumes:
-      - ./postgres_data/pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./entrypoint.sh:/usr/bin/entrypoint.sh
+    user: postgres
     entrypoint: ["/usr/bin/entrypoint.sh"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DB_TABLE_NAME: ${DB_TABLE_NAME}
+    stop_grace_period: 30s
   evm:
-    image: rust
     restart: always
     env_file: .env
+    image: rust
+volumes:
+  postgres_data:
+    driver: local

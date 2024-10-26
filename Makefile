@@ -4,6 +4,15 @@ COMPOSE_FILE=docker-compose.yml
 # Define project name
 PROJECT_NAME=orb
 
+
+all: up
+
+re: down up
+
+fclean: down rm
+
+clean: down
+
 # Bring up the services (detached mode by default)
 up:
 	docker compose -f $(COMPOSE_FILE) -p $(PROJECT_NAME) up -d
@@ -24,10 +33,6 @@ build:
 pull:
 	docker compose -f $(COMPOSE_FILE) -p $(PROJECT_NAME) pull
 
-# Show container logs (all or specific service, e.g., make logs service=web)
-logs:
-	docker compose -f $(COMPOSE_FILE) -p $(PROJECT_NAME) logs $(service)
-
 # Restart services
 restart:
 	docker compose -f $(COMPOSE_FILE) -p $(PROJECT_NAME) restart $(service)
@@ -44,7 +49,4 @@ start:
 rm:
 	docker compose -f $(COMPOSE_FILE) -p $(PROJECT_NAME) rm -f
 
-# Show the status of all containers
-ps:
-	docker compose -f $(COMPOSE_FILE) -p $(PROJECT_NAME) ps
-
+.PHONY: all re fclean clean
