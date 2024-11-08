@@ -49,4 +49,8 @@ start:
 rm:
 	docker compose -f $(COMPOSE_FILE) -p $(PROJECT_NAME) rm -f
 
-.PHONY: all re fclean clean
+# Print logs in follow mode
+logs:
+	docker compose -f $(COMPOSE_FILE) -p $(PROJECT_NAME) logs -f
+
+.PHONY: all re fclean clean logs
