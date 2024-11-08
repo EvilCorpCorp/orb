@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./entrypoint.sh:/usr/bin/entrypoint.sh
+    user: postgres
+    entrypoint: ["/usr/bin/entrypoint.sh"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_TABLE_NAME: ${DB_TABLE_NAME}
+    stop_grace_period: 30s
+  evm:
+    volumes:
+      - orb:/home/orb/
+    working_dir: /home/orb/
+    command: cargo run
+    restart: always
+    env_file: .env
+    image: rust
+
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      device: "/home/orb/postgres_data"
+      type: none
+      o: bind
+  orb:
+    driver: local
+    driver_opts:
+      device: "/home/orb/orb"
+      type: none
+      o: bind
+
+
