@@ -1,4 +1,5 @@
 services:
+
   db:
     image: postgres
     restart: always
@@ -13,13 +14,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DB_TABLE_NAME: ${DB_TABLE_NAME}
     stop_grace_period: 30s
+
   evm:
-    volumes:
-      - .:/home/orb/
-    working_dir: /home/orb/
-    command: cargo run
+    build: .
     restart: always
-    env_file: .env
-    image: rust
     ports:
       - "127.0.0.1:3000:3000"
+    volumes:
+      - ./config.toml:/config.toml
