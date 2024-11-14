@@ -1,4 +1,5 @@
 services:
+<<<<<<< HEAD
 
   db:
     image: postgres
@@ -22,3 +23,17 @@ services:
       - "127.0.0.1:3000:3000"
     volumes:
       - ./config.toml:/config.toml
+=======
+  postgres:
+    build:
+      context: .  # Use the current directory where the Dockerfile is located
+      dockerfile: Dockerfile
+    container_name: postgres_db  # Optional: specify a custom container name
+    ports:
+      - "5432:3306"  # Map host port 8080 to container port 8080 (if needed)
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    tty: true  # Keep the container running with an interactive shell
+    env_file: 
+        .env
+>>>>>>> 0ce4679 (trying postgres alpine ..)
