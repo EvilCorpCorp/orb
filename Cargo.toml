@@ -13,3 +13,4 @@ revm = { version = "10.0.0", features = ["ethersdb", "std", "serde-json"] }
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.36", features = ["full"] }
 toml = "0.8.0"
+sqlx = { version = "*", features = ["runtime-tokio-native-tls", "postgres"] }

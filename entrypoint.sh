@@ -43,7 +43,8 @@ if ! psql -lqt | cut -d \| -f 1 | grep -qw "$POSTGRES_DB"; then
         gas_limit BIGINT NOT NULL,
         data TEXT,
         gas_priority_fee VARCHAR(255),
-        max_fee_per_blob_gas VARCHAR(255)
+        max_fee_per_blob_gas VARCHAR(255),
+        flagged BOOLEAN,
     );"
 
   echo "Table $TABLE_NAME created successfully."
